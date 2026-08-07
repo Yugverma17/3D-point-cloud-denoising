@@ -1,0 +1,8 @@
+numpy>=1.24
+scipy>=1.10
+torch>=2.0
+trimesh>=4.0
+tqdm>=4.65
+PyYAML>=6.0
+matplotlib>=3.7
+pytest>=7.0

@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# data and run artifacts
+data/
+runs/
+checkpoints/
+results/
+*.pth
+*.pt
+*.npy
+*.xyz
+*.off
