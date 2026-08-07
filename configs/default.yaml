@@ -1,0 +1,34 @@
+# Defaults for scripts/train.py. Command-line flags override anything here.
+#
+# Note on training length: the model needs enough steps to converge, and an
+# undertrained one is worse than no denoising at all. On a toy sphere, 4
+# epochs came out 55% worse than the noisy input while 20 epochs came out
+# 98% better. If results look bad, check the loss curve before changing the
+# architecture.
+
+data: data/train
+out: runs/default
+
+epochs: 50
+batch_size: 32
+lr: 0.001
+seed: 0
+
+# Patch settings. points_per_patch is the k in the k-NN neighbourhood, so it
+# sets how much context the network sees around each point. Bigger is more
+# context but costs O(k^2) in attention.
+points_per_patch: 256
+patches_per_shape: 1000
+
+# Gaussian noise as a fraction of each shape's bounding-box diagonal, applied
+# on the fly. 0.01 / 0.02 / 0.03 are the levels used in published benchmarks.
+noise_level: 0.02
+
+# Weight on the repulsion term. Chamfer alone lets points bunch together,
+# which scores well on CD and badly on P2M; this pushes them apart.
+repulsion_weight: 0.05
+
+# Architecture
+d_model: 256
+num_heads: 8
+num_layers: 6
