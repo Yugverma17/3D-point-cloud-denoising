@@ -2,6 +2,7 @@ numpy>=1.24
 scipy>=1.10
 torch>=2.0
 trimesh>=4.0
+rtree>=1.0        # exact point-to-mesh queries for P2M
 tqdm>=4.65
 PyYAML>=6.0
 matplotlib>=3.7
