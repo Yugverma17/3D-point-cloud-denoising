@@ -111,7 +111,7 @@ exact files matter.
 
 ```bash
 pip install -r requirements.txt
-pytest                                    # 23 tests
+pytest                                    # 35 tests
 pytest -m "not slow"                      # skip the training checks
 ```
 
@@ -147,8 +147,11 @@ pointdenoise/
   losses.py     robust Chamfer plus repulsion
   metrics.py    CD and P2M in the published benchmark convention
   engine.py     training and inference loops
-scripts/        train.py, evaluate.py
-tests/          23 tests, including regression tests for both bugs above
+  baselines.py  bilateral and Laplacian, used to calibrate the harness
+  benchmark.py  PU-Net/PC-Net protocol and comparison table
+scripts/        train.py, evaluate.py, benchmark.py
+docs/           benchmark.md - getting the test data
+tests/          35 tests, including regression tests for both bugs above
 configs/        default.yaml
 ```
 
