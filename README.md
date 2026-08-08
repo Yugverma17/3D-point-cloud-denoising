@@ -81,6 +81,32 @@ budget:
 So a bad short run says nothing about the architecture. Check the loss curve
 before changing anything.
 
+## Benchmark
+
+`scripts/benchmark.py` runs the PU-Net / PC-Net grid: two resolutions (10K
+sparse, 50K dense) by three noise levels (1/2/3%), scored by Chamfer distance
+and point-to-mesh, reported x1e-4. Results print straight into the published
+comparison table.
+
+Classical baselines (`bilateral`, `laplacian`) and the `identity` no-op run
+through the same measurement path as the model, so nothing is compared across
+different code.
+
+**Calibrate before quoting any number.** The bilateral filter's scores appear
+in the published tables, so scoring it here says whether our normalization,
+Chamfer convention and noise model match theirs:
+
+```bash
+python scripts/benchmark.py --data data/benchmark --calibrate
+```
+
+It reports PASS, FAIL, or INCONCLUSIVE. The last means you ran it on
+substitute shapes rather than the released test set, where any difference
+mixes the metric convention up with the shapes being easier or harder. That is
+not a calibration, so it refuses to certify. See
+[docs/benchmark.md](docs/benchmark.md) for where to get the data and why the
+exact files matter.
+
 ## Usage
 
 ```bash
@@ -137,6 +163,6 @@ against one number from that table.
 
 ## Next
 
-- PU-Net and PC-Net benchmark harness at 10K/50K points and 1/2/3% noise
+- Download the released PU-Net/PC-Net test data and run `--calibrate`
 - Train on the full shape set rather than the toy data used so far
-- Compare against published baselines once the harness is calibrated
+- Fill in the comparison table once calibration passes
