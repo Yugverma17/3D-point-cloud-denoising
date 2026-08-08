@@ -15,3 +15,6 @@ results/
 *.off
 # benchmark archives (224 MB, see docs/benchmark.md to re-download)
 data/*.zip
+
+# Kaggle upload bundles (regenerate with scripts/package_for_kaggle.py)
+kaggle/*.zip
