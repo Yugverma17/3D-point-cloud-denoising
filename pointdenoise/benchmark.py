@@ -118,27 +118,31 @@ def add_benchmark_noise(points, level, rng=None):
 
 def load_released_set(root, dataset="PUNet", resolution="sparse", noise=0.01):
     """
-    Load a released benchmark directory.
+    Load a released benchmark case from the ScoreDenoise data archive.
 
-    Expects the ScoreDenoise layout, e.g.
+    The archive unpacks to:
 
         root/
-          PUNet_10000_poisson_0.01/   noisy clouds, one .xyz per shape
-          PUNet_10000_poisson/        the clean clouds at that resolution
-          meshes/                     ground-truth meshes for P2M
+          examples/PUNet_10000_poisson_0.01/   noisy test clouds, one .xyz each
+          PUNet/pointclouds/test/10000_poisson/ the matching clean clouds
+          PUNet/meshes/test/                    ground-truth meshes for P2M
 
-    Returns a BenchmarkCase.
+    The noisy clouds live under `examples/` while their clean counterparts sit
+    in a completely different subtree, which is easy to get wrong. Both are
+    plain whitespace-separated xyz with one point per line and no header.
     """
     root = Path(root)
     n = RESOLUTIONS[resolution]
-    noisy_dir = root / f"{dataset}_{n}_poisson_{noise:.2f}"
-    clean_dir = root / f"{dataset}_{n}_poisson"
-    mesh_dir = root / "meshes"
 
-    if not noisy_dir.is_dir() or not clean_dir.is_dir():
+    noisy_dir = root / "examples" / f"{dataset}_{n}_poisson_{noise:.2f}"
+    clean_dir = root / dataset / "pointclouds" / "test" / f"{n}_poisson"
+    mesh_dir = root / dataset / "meshes" / "test"
+
+    missing = [str(d) for d in (noisy_dir, clean_dir) if not d.is_dir()]
+    if missing:
         raise FileNotFoundError(
-            f"expected {noisy_dir} and {clean_dir}.\n"
-            "See docs/benchmark.md for where to get the released test data."
+            "benchmark data not found: " + ", ".join(missing) + "\n"
+            "See docs/benchmark.md for where to get it and how to unpack it."
         )
 
     case = BenchmarkCase(dataset=dataset, resolution=resolution, noise=noise)
@@ -151,13 +155,31 @@ def load_released_set(root, dataset="PUNet", resolution="sparse", noise=0.01):
         noisy = np.loadtxt(noisy_path)[:, :3]
         case.shapes.append(Shape(clean, noisy=noisy))
         case.names.append(stem)
-        mesh = next((mesh_dir / f"{stem}{e}" for e in (".off", ".ply", ".obj")
-                     if (mesh_dir / f"{stem}{e}").exists()), None)
+        mesh = next(
+            (mesh_dir / f"{stem}{e}" for e in (".off", ".ply", ".obj")
+             if (mesh_dir / f"{stem}{e}").exists()),
+            None,
+        )
         case.meshes.append(mesh)
 
     if not case.shapes:
-        raise RuntimeError(f"no matching shape pairs found in {noisy_dir}")
+        raise RuntimeError(f"no clean/noisy pairs matched between {noisy_dir} and {clean_dir}")
     return case
+
+
+def load_training_clouds(root, dataset="PUNet", resolution="sparse"):
+    """
+    Clean training clouds, as (name, points) pairs.
+
+    Training uses only the clean shapes: noise is generated on the fly so one
+    download covers every noise level, and the model sees a fresh draw each
+    epoch rather than memorising one fixed corruption.
+    """
+    n = RESOLUTIONS.get(resolution, resolution)
+    train_dir = Path(root) / dataset / "pointclouds" / "train" / f"{n}_poisson"
+    if not train_dir.is_dir():
+        raise FileNotFoundError(f"training clouds not found at {train_dir}")
+    return [(p.stem, np.loadtxt(p)[:, :3]) for p in sorted(train_dir.glob("*.xyz"))]
 
 
 def build_case_from_meshes(mesh_dir, resolution="sparse", noise=0.01, dataset="local", seed=0):

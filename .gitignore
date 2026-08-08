@@ -13,3 +13,5 @@ results/
 *.npy
 *.xyz
 *.off
+# benchmark archives (224 MB, see docs/benchmark.md to re-download)
+data/*.zip
