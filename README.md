@@ -10,10 +10,27 @@ predicts a displacement per point.
 
 ## Status
 
-Working, trained on toy data so far. On a noisy sphere it removes 97.7% of the
-Chamfer error (162.06 to 3.66, x1e-4) given 20 epochs. The next step is the
-PU-Net / PC-Net benchmark so the numbers can be compared against published
-methods.
+Trained on the real PU-Net set and benchmarked. Run 1 (60 epochs, 8.5 h on a
+Kaggle T4) against the published PU-Net table, Chamfer only:
+
+| case | ours CD | noisy input | improvement |
+|---|---|---|---|
+| sparse/1% | 4.70 | 4.79 | +2% |
+| sparse/2% | 5.15 | 11.59 | +56% |
+| sparse/3% | 5.51 | 20.64 | +73% |
+| dense/1% | 0.87 | 3.19 | +73% |
+
+That beats Bilateral, PCNet and DMRDenoise at the higher noise levels and
+sits behind GLR, ScoreDenoise, PD-Flow, I-PFN and P2P-Bridge. The sparse/1%
+row is the tell, and the cause is in
+[Fixed-noise training](#fixed-noise-training-breaks-the-low-noise-case) below;
+run 2 with the fix has not been done yet.
+
+**P2M is not reported.** Calibration passes on CD at 0.84x of the published
+Bilateral score but P2M comes out at 0.17x for the same algorithm on the same
+shapes, so it measures something different from what the papers report. Run 1's
+P2M looked better than every published method, which is an artifact of the
+definition rather than a result. See [Metric conventions](#metric-conventions).
 
 ## Why attention needs geometry
 
@@ -66,6 +83,25 @@ left untouched wrecked coverage and the total came out worse. Switching to
 k-NN covers every point and drops the supervision ceiling by 36x. Covered by
 `test_every_point_gets_a_patch`.
 
+## Fixed-noise training breaks the low-noise case
+
+Run 1 trained at a single fixed 2% noise level, and the benchmark shows what
+that costs: +56% at 2%, +73% at 3%, and +2% at 1%. The model learned one
+correction size and applied it regardless, so where the input was already
+close it displaced points that did not need moving.
+
+Reproduced on a sphere, same code, only the training noise differs:
+
+| test noise | noisy CD | trained at fixed 2% | trained 0.5-3% |
+|---|---|---|---|
+| 1% | 122.36 | 225.81 (**84.5% worse**) | 33.99 (72.2% better) |
+| 2% | 436.61 | 247.09 (43.4% better) | 78.07 (**82.1% better**) |
+| 3% | 841.18 | 432.25 (48.6% better) | 140.59 (**83.3% better**) |
+
+At 1% the fixed-noise model is worse than not denoising at all. Sampling the
+range wins at every level, including the one the fixed model trained on.
+`PatchDataset(noise_range=(0.005, 0.03))` is now the default.
+
 ## Undertraining looks like a bug
 
 An undertrained model has learned a partial displacement that overshoots, and
@@ -97,21 +133,28 @@ in the published tables, so scoring it here says whether our normalization,
 Chamfer convention and noise model match theirs:
 
 ```bash
-python scripts/benchmark.py --data data/benchmark --calibrate
+python scripts/benchmark.py --data data --calibrate
 ```
 
-It reports PASS, FAIL, or INCONCLUSIVE. The last means you ran it on
-substitute shapes rather than the released test set, where any difference
-mixes the metric convention up with the shapes being easier or harder. That is
-not a calibration, so it refuses to certify. See
-[docs/benchmark.md](docs/benchmark.md) for where to get the data and why the
-exact files matter.
+Every reported metric is checked separately, because gating on Chamfer alone
+let a real problem through: CD agreed at 0.84x while P2M sat at 0.17x for the
+same algorithm on the same shapes, and the run reported PASS. Current state:
+
+```
+CD   ratio 0.84x  PASS      QUOTABLE: CD
+P2M  ratio 0.17x  FAIL      DO NOT QUOTE: P2M
+```
+
+It also reports INCONCLUSIVE if run on substitute shapes rather than the
+released test set, where any difference mixes the metric convention up with
+the shapes being easier or harder. That is not a calibration, so it refuses to
+certify. See [docs/benchmark.md](docs/benchmark.md) for the data.
 
 ## Usage
 
 ```bash
 pip install -r requirements.txt
-pytest                                    # 35 tests
+pytest                                    # 37 tests
 pytest -m "not slow"                      # skip the training checks
 ```
 
@@ -151,7 +194,7 @@ pointdenoise/
   benchmark.py  PU-Net/PC-Net protocol and comparison table
 scripts/        train.py, evaluate.py, benchmark.py
 docs/           benchmark.md - getting the test data
-tests/          35 tests, including regression tests for both bugs above
+tests/          37 tests, including regression tests for both bugs above
 configs/        default.yaml
 ```
 
@@ -161,11 +204,16 @@ Denoising papers report Chamfer distance in at least two conventions that
 differ by a factor of two, so numbers are only comparable if the convention
 matches. `metrics.py` normalizes both clouds to the unit sphere, sums the mean
 squared nearest-neighbour distance in both directions, and reports the result
-multiplied by 1e4. Before comparing against any published table, calibrate
-against one number from that table.
+multiplied by 1e4, which reproduces the published Bilateral CD to 0.84x.
+
+P2M is unresolved. Neither mean distance nor mean squared distance reproduces
+the published value, so the papers use a definition this project has not
+matched yet and P2M is excluded from any comparison. Resolving it needs their
+evaluation code rather than another guess.
 
 ## Next
 
-- Download the released PU-Net/PC-Net test data and run `--calibrate`
-- Train on the full shape set rather than the toy data used so far
-- Fill in the comparison table once calibration passes
+- Run 2 with per-patch noise sampling and re-benchmark
+- Resolve the P2M convention against the published evaluation code so the
+  second metric becomes quotable
+- Close the CD gap to ScoreDenoise and above
