@@ -263,10 +263,22 @@ def calibrate(case, tolerance=0.35, reference="Bilateral", published=None):
         "expected_p2m": expected_p2m,
         "measured_p2m": ours.get("p2m"),
     }
-    result["cd_ratio"] = result["measured_cd"] / expected_cd if expected_cd else float("nan")
-    result["within_tolerance"] = (
-        conclusive and abs(result["cd_ratio"] - 1.0) <= tolerance
-    )
+
+    # Every reported metric is checked separately. Gating on Chamfer alone was
+    # a real mistake here: CD agreed at 0.84x while P2M sat at 0.17x for the
+    # same algorithm on the same shapes, and the run passed. A metric that
+    # disagrees by ~6x is measuring something different from what the table
+    # reports, so its numbers must not be quoted even when CD is fine.
+    for name, expected in (("cd", expected_cd), ("p2m", expected_p2m)):
+        measured = ours.get(name)
+        ratio = measured / expected if expected and measured is not None else float("nan")
+        result[f"{name}_ratio"] = ratio
+        result[f"{name}_ok"] = conclusive and abs(ratio - 1.0) <= tolerance
+
+    # Kept for callers that only care about the headline metric.
+    result["within_tolerance"] = result["cd_ok"]
+    result["comparable_metrics"] = [m for m in ("cd", "p2m") if result[f"{m}_ok"]]
+    result["uncalibrated_metrics"] = [m for m in ("cd", "p2m") if not result[f"{m}_ok"]]
     return result
 
 

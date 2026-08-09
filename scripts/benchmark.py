@@ -116,13 +116,20 @@ def main():
             print("  Get the released data first: see docs/benchmark.md")
             raise SystemExit(2)
 
-        if result["within_tolerance"]:
-            print("  PASS - convention matches, results may be quoted alongside published numbers")
-        else:
-            print("  FAIL - do NOT put these numbers in a comparison table.")
-            print("  A ratio near 2 or 0.5 means the Chamfer convention differs;")
-            print("  a large ratio usually means the noise scale or normalization differs.")
-        raise SystemExit(0 if result["within_tolerance"] else 1)
+        ok = result["comparable_metrics"]
+        bad = result["uncalibrated_metrics"]
+        for m in ("cd", "p2m"):
+            verdict = "PASS" if result[f"{m}_ok"] else "FAIL"
+            print(f"  {m.upper():<4} ratio {result[f'{m}_ratio']:.2f}x  {verdict}")
+        print()
+        if ok:
+            print(f"  QUOTABLE: {', '.join(m.upper() for m in ok)}")
+        if bad:
+            print(f"  DO NOT QUOTE: {', '.join(m.upper() for m in bad)}")
+            print("  Those metrics measure something different from the published table.")
+            print("  A ratio near 2 or 0.5 usually means a squared/unsquared or one-sided")
+            print("  convention difference; a larger gap means a different definition.")
+        raise SystemExit(0 if not bad else 1)
 
     name, denoise_fn = make_denoiser(args)
     scores, lines = {}, []
