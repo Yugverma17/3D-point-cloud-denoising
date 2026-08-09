@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from pointdenoise.data import Shape
+from pointdenoise.data import PatchDataset, Shape, collate
 from pointdenoise.engine import denoise_cloud, evaluate, load_model, train, write_report
 from pointdenoise.metrics import chamfer_distance
 from pointdenoise.model import Denoiser
@@ -113,3 +113,28 @@ def test_training_improves_a_real_cloud(tmp_path, shapes):
     print(f"\n  CD {before*1e4:.2f} -> {after*1e4:.2f} (x1e-4), "
           f"{100*(before-after)/before:.1f}% better")
     assert after < before
+
+
+def test_noise_range_varies_the_corruption(shapes):
+    """
+    Training must see the whole noise range the benchmark tests.
+
+    A model trained at one fixed level learns one correction size and applies
+    it regardless: the first real run, trained only at 2%, improved CD by 56%
+    at 2% and 73% at 3% but only 2% at 1%, because it kept displacing points
+    that were already nearly right.
+    """
+    ds = PatchDataset([shapes[0]], points_per_patch=32, patches_per_shape=40,
+                      seed=0, noise_range=(0.005, 0.03), resample_every=1)
+    spreads = []
+    for i in range(0, 40, 8):
+        batch = collate([ds[i]])
+        spreads.append(float(batch["points"].std()))
+    assert len(set(round(s, 6) for s in spreads)) > 1, "noise level never changed"
+
+
+def test_noise_range_none_keeps_the_shape_as_given(shapes):
+    """Evaluation needs the exact cloud it was handed, not a fresh draw."""
+    ds = PatchDataset([shapes[0]], points_per_patch=32, patches_per_shape=4,
+                      seed=0, noise_range=None)
+    assert ds._shape_for(0, 0) is shapes[0]

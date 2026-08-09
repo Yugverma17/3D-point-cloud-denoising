@@ -94,6 +94,7 @@ def train(
     lr=1e-3,
     weight_decay=1e-4,
     repulsion_weight=0.05,
+    noise_range=(0.005, 0.03),
     model_kwargs=None,
     device=None,
     resume=None,
@@ -130,13 +131,16 @@ def train(
         points_per_patch=points_per_patch,
         patches_per_shape=patches_per_shape,
         seed=seed,
+        noise_range=noise_range,
     )
     loader = DataLoader(
         dataset, batch_size=batch_size, collate_fn=collate,
         num_workers=num_workers, drop_last=True,
     )
 
-    print(f"{len(shapes)} shapes, {len(dataset)} patches/epoch, device={device}")
+    noise_desc = (f"noise {noise_range[0]:.1%}-{noise_range[1]:.1%} sampled per patch"
+                  if noise_range else "fixed noise from each Shape")
+    print(f"{len(shapes)} shapes, {len(dataset)} patches/epoch, {noise_desc}, device={device}")
 
     for epoch in range(start_epoch, epochs):
         model.train()
