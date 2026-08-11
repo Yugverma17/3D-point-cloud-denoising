@@ -8,6 +8,10 @@ data/
 runs/
 checkpoints/
 results/
+# ...but keep the written-up results, which are the point of the project
+!results/
+results/*.pt
+results/runs/
 *.pth
 *.pt
 *.npy
