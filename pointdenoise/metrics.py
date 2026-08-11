@@ -100,3 +100,58 @@ def format_table(names, rows, title=None):
     lines.append("-" * len(header))
     lines.append(f"{'AVERAGE':<20}" + "".join(f"{avg[k]:16.4f}" for k in metric_keys))
     return "\n".join(lines)
+
+
+def paper_table(our_scores, our_name="Ours", dataset="PUNet", published=None, markdown=False):
+    """
+    The published comparison layout: resolution blocks across the top, noise
+    levels within each, CD and P2M side by side per cell.
+
+    `our_scores` maps (resolution, noise) -> {"cd": float, "p2m": float}.
+    Cells with no measurement are left blank rather than guessed, so a partial
+    run is obviously partial.
+    """
+    from .benchmark import NOISE_LEVELS, PUBLISHED_PUNET
+
+    published = dict(published or PUBLISHED_PUNET)
+    published[our_name] = {
+        k: (v.get("cd", float("nan")), v.get("p2m", float("nan")))
+        for k, v in our_scores.items()
+    }
+    columns = [(r, n) for r in ("sparse", "dense") for n in NOISE_LEVELS]
+
+    def cell(method, key):
+        vals = published.get(method, {}).get(key)
+        if not vals or vals[0] != vals[0]:  # NaN check
+            return ("     -", "     -")
+        return (f"{vals[0]:6.2f}", f"{vals[1]:6.2f}")
+
+    if markdown:
+        head = "| Method | " + " | ".join(
+            f"{'10K' if r == 'sparse' else '50K'} {int(n*100)}%" for r, n in columns
+        ) + " |"
+        lines = [head, "|" + "---|" * (len(columns) + 1)]
+        for m in published:
+            cells = []
+            for k in columns:
+                cd, p2m = cell(m, k)
+                cells.append(f"{cd.strip()} / {p2m.strip()}")
+            label = f"**{m}**" if m == our_name else m
+            lines.append(f"| {label} | " + " | ".join(cells) + " |")
+        return "\n".join(lines)
+
+    width = 14
+    l1 = " " * 18 + f"{'10 x 10^3 (sparse)':^{width*3}}" + f"{'50 x 10^3 (dense)':^{width*3}}"
+    l2 = " " * 18 + "".join(f"{str(int(n*100)) + '%':^{width}}" for _, n in columns)
+    l3 = f"{'Method':<18}" + "".join(f"{'CD':>7}{'P2M':>7}" for _ in columns)
+    out = [f"{dataset} test set", "", l1, l2, l3, "-" * len(l3)]
+    for m in published:
+        row = f"{m:<18}" if m != our_name else f"{m + ' <<':<18}"
+        for k in columns:
+            cd, p2m = cell(m, k)
+            row += f"{cd:>7}{p2m:>7}"
+        if m == our_name:
+            out.append("-" * len(l3))
+        out.append(row)
+    out += ["-" * len(l3), "", "CD and P2M x 1e-4. Lower is better."]
+    return "\n".join(out)
