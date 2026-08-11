@@ -10,27 +10,26 @@ predicts a displacement per point.
 
 ## Status
 
-Trained on the real PU-Net set and benchmarked. Run 1 (60 epochs, 8.5 h on a
-Kaggle T4) against the published PU-Net table, Chamfer only:
+Trained on the PU-Net training set and benchmarked against the published
+comparison table. **Chamfer distance only** - see
+[Metric conventions](#metric-conventions) for why P2M is excluded.
 
-| case | ours CD | noisy input | improvement |
-|---|---|---|---|
-| sparse/1% | 4.70 | 4.79 | +2% |
-| sparse/2% | 5.15 | 11.59 | +56% |
-| sparse/3% | 5.51 | 20.64 | +73% |
-| dense/1% | 0.87 | 3.19 | +73% |
+| case | ours | best published | rank | beats |
+|---|---|---|---|---|
+| sparse/1% | 2.89 | 2.13 (PD-Flow) | 5/9 | Bilateral, PCNet, DMRDenoise, GLR |
+| sparse/2% | 4.07 | 3.20 (P2P-Bridge) | 6/9 | Bilateral, PCNet, DMRDenoise |
+| sparse/3% | 5.29 | 3.99 (P2P-Bridge) | 6/9 | Bilateral, PCNet, DMRDenoise |
+| dense/1% | 0.76 | 0.59 (P2P-Bridge) | 6/9 | Bilateral, PCNet, DMRDenoise |
+| dense/2% | 1.40 | 0.90 (P2P-Bridge) | 4/9 | + GLR, PD-Flow |
+| dense/3% | 2.77 | 1.56 (P2P-Bridge) | 6/9 | Bilateral, GLR, PD-Flow |
 
-That beats Bilateral, PCNet and DMRDenoise at the higher noise levels and
-sits behind GLR, ScoreDenoise, PD-Flow, I-PFN and P2P-Bridge. The sparse/1%
-row is the tell, and the cause is in
-[Fixed-noise training](#fixed-noise-training-breaks-the-low-noise-case) below;
-run 2 with the fix has not been done yet.
+Against the noisy input the model removes 40% of the Chamfer error at 1% noise
+and 86% at 3%. It beats the classical and older learned methods consistently
+and sits behind ScoreDenoise, I-PFN and P2P-Bridge. Full numbers in
+[results/benchmark_run2.txt](results/benchmark_run2.txt).
 
-**P2M is not reported.** Calibration passes on CD at 0.84x of the published
-Bilateral score but P2M comes out at 0.17x for the same algorithm on the same
-shapes, so it measures something different from what the papers report. Run 1's
-P2M looked better than every published method, which is an artifact of the
-definition rather than a result. See [Metric conventions](#metric-conventions).
+The checkpoint behind this trained 46 of a planned 60 epochs and its loss was
+still falling, so the table is not the ceiling for this architecture.
 
 ## Why attention needs geometry
 
@@ -85,12 +84,25 @@ k-NN covers every point and drops the supervision ceiling by 36x. Covered by
 
 ## Fixed-noise training breaks the low-noise case
 
-Run 1 trained at a single fixed 2% noise level, and the benchmark shows what
+Run 1 trained at a single fixed 2% noise level, and the benchmark showed what
 that costs: +56% at 2%, +73% at 3%, and +2% at 1%. The model learned one
 correction size and applied it regardless, so where the input was already
 close it displaced points that did not need moving.
 
-Reproduced on a sphere, same code, only the training noise differs:
+Sampling the level per patch instead fixed it. Same architecture, same budget,
+measured on the real benchmark:
+
+| case | run 1 (fixed 2%) | run 2 (range 0.5-3%) |
+|---|---|---|
+| sparse/1% | 4.70 | **2.89** |
+| sparse/2% | 5.15 | 4.07 |
+| sparse/3% | 5.51 | 5.29 |
+| dense/1% | 0.87 | 0.76 |
+
+The targeted cell went from +2% over the noisy input to +40%, and every other
+cell improved too - on a checkpoint that saw 46 epochs rather than 60.
+
+The mechanism, isolated on a sphere:
 
 | test noise | noisy CD | trained at fixed 2% | trained 0.5-3% |
 |---|---|---|---|
