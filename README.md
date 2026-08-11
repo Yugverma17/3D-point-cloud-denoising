@@ -233,9 +233,14 @@ the published value, so the papers use a definition this project has not
 matched yet and P2M is excluded from any comparison. Resolving it needs their
 evaluation code rather than another guess.
 
-## Next
+## What is left
 
-- Run 2 with per-patch noise sampling and re-benchmark
-- Resolve the P2M convention against the published evaluation code so the
-  second metric becomes quotable
-- Close the CD gap to ScoreDenoise and above
+- **Finish the run.** The checkpoint behind the table stopped at 46 of 60
+  epochs with the loss still falling, so these numbers are not the ceiling.
+- **PC-Net half of the benchmark.** The data is downloaded and the harness
+  supports it; it just has not been run.
+- **Resolve the P2M convention** against the published evaluation code, which
+  would make the second metric quotable instead of excluded.
+- **Close the CD gap.** ScoreDenoise, I-PFN and P2P-Bridge are ahead in every
+  cell. Those use different formulations (score matching, iterative filtering,
+  a Schrodinger bridge) rather than better tuning of this one.
