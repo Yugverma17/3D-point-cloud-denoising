@@ -132,7 +132,7 @@ def main():
         raise SystemExit(0 if not bad else 1)
 
     name, denoise_fn = make_denoiser(args)
-    scores, lines = {}, []
+    scores, lines, per_shape = {}, [], []
 
     for resolution in args.resolutions:
         for noise in args.noise:
@@ -142,7 +142,22 @@ def main():
                 print(f"skipping {resolution}/{noise:.0%}: {exc}")
                 continue
             rows, avg = run_case(case, denoise_fn, with_p2m=not args.no_p2m, progress=tqdm)
+            base_rows, _ = run_case(case, lambda pts: pts, with_p2m=not args.no_p2m)
             scores[(resolution, noise)] = avg
+
+            # Keep every shape, not just the mean. The mean hides which shapes
+            # the model struggles with, and that is where the error lives.
+            for shape_name, r, b in zip(case.names, rows, base_rows):
+                per_shape.append({
+                    "resolution": resolution,
+                    "noise": f"{noise:.0%}",
+                    "shape": shape_name,
+                    "cd": round(r["cd"], 4),
+                    "noisy_cd": round(b["cd"], 4),
+                    "cd_gain_pct": round((b["cd"] - r["cd"]) / b["cd"] * 100, 1),
+                    "p2m_uncalibrated": round(r.get("p2m", float("nan")), 4),
+                })
+
             summary = "  ".join(f"{k.upper()} {v:.4f}" for k, v in avg.items())
             print(f"{case.label:<24} {summary}")
             lines.append(f"{case.label:<24} {summary}")
@@ -157,6 +172,25 @@ def main():
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines) + "\n\n" + table + "\n")
     print(f"\nwritten to {out}")
+
+    if per_shape:
+        import csv
+
+        shape_csv = out.with_name(out.stem + "_per_shape.csv")
+        with open(shape_csv, "w", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(per_shape[0].keys()))
+            w.writeheader()
+            w.writerows(per_shape)
+        print(f"per-shape rows -> {shape_csv}")
+
+        print()
+        print("worst 5 shapes by CD in each case:")
+        for key in scores:
+            sel = [r for r in per_shape
+                   if r["resolution"] == key[0] and r["noise"] == f"{key[1]:.0%}"]
+            sel.sort(key=lambda r: -r["cd"])
+            worst = "  ".join(f"{r['shape']}={r['cd']:.2f}" for r in sel[:5])
+            print(f"  {key[0]}/{key[1]:.0%}  mean {scores[key]['cd']:.2f} | {worst}")
 
 
 if __name__ == "__main__":
