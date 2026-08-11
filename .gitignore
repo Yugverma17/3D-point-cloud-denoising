@@ -22,3 +22,6 @@ data/*.zip
 
 # Kaggle upload bundles (regenerate with scripts/package_for_kaggle.py)
 kaggle/*.zip
+
+# stray checkpoint archive, never belonged in the repo
+best.zip
