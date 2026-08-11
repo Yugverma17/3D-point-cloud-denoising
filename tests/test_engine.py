@@ -77,9 +77,34 @@ def test_train_writes_checkpoints_and_history(tmp_path, shapes):
     assert 1 <= best_ckpt["epoch"] <= 2
 
     # a checkpoint must rebuild without being told the architecture
-    restored, _ = load_model(tmp_path / "last.pt")
+    restored, _ = load_model(tmp_path / "best.pt")
     x = torch.randn(1, 16, 3)
     assert torch.allclose(restored(x), model.cpu().eval()(x), atol=1e-5)
+
+
+def test_train_returns_the_best_checkpoint_not_the_last_epoch(tmp_path, shapes):
+    """
+    Loss is not guaranteed to keep falling to the final epoch - it can rise
+    again late in training. On a real run the loss curve bottomed around
+    epoch 45 of 60 and rose afterward, and because train() used to return
+    whatever model the loop happened to end on, a notebook benchmarking that
+    return value was silently scoring the worse epoch-60 model while best.pt
+    on disk correctly still pointed at epoch 46.
+
+    train() now always hands back the weights that are actually in best.pt,
+    regardless of which epoch the loop stopped at.
+    """
+    model, _ = train(
+        shapes, out_dir=tmp_path, epochs=3, batch_size=4,
+        points_per_patch=32, patches_per_shape=8,
+        model_kwargs={"d_model": 32, "num_heads": 2, "num_layers": 1,
+                      "k_coarse": 8, "k_fine": 4},
+    )
+    best_model, _ = load_model(tmp_path / "best.pt")
+    x = torch.randn(2, 20, 3)
+    model.eval()
+    with torch.no_grad():
+        assert torch.allclose(model(x), best_model(x), atol=1e-6)
 
 
 @pytest.mark.slow

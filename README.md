@@ -124,6 +124,20 @@ At 1% the fixed-noise model is worse than not denoising at all. Sampling the
 range wins at every level, including the one the fixed model trained on.
 `PatchDataset(noise_range=(0.005, 0.03))` is now the default.
 
+## The last epoch is not the best epoch
+
+Loss is not guaranteed to keep falling to the final epoch. On a real 60-epoch
+run it bottomed around epoch 45 (~0.523) and rose back to ~0.535 by epoch 60,
+even with the learning rate still decaying - the model started overfitting or
+destabilizing past that point, and best.pt correctly stopped updating there.
+
+`train()` used to return whatever model the loop happened to end on rather
+than the best-loss checkpoint. That silently mattered: a notebook benchmarking
+the returned model right after training was scoring the worse epoch-60 weights
+while best.pt on disk still correctly pointed at epoch 46. `train()` now always
+hands back best.pt's weights regardless of which epoch the loop stopped at.
+Covered by `test_train_returns_the_best_checkpoint_not_the_last_epoch`.
+
 ## Undertraining looks like a bug
 
 An undertrained model has learned a partial displacement that overshoots, and
@@ -176,7 +190,7 @@ certify. See [docs/benchmark.md](docs/benchmark.md) for the data.
 
 ```bash
 pip install -r requirements.txt
-pytest                                    # 37 tests
+pytest                                    # 38 tests
 pytest -m "not slow"                      # skip the training checks
 ```
 
@@ -216,7 +230,7 @@ pointdenoise/
   benchmark.py  PU-Net/PC-Net protocol and comparison table
 scripts/        train.py, evaluate.py, benchmark.py
 docs/           benchmark.md - getting the test data
-tests/          37 tests, including regression tests for both bugs above
+tests/          38 tests, including regression tests for the bugs above
 configs/        default.yaml
 ```
 

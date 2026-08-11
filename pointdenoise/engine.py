@@ -193,6 +193,20 @@ def train(
 
         (out_dir / "history.json").write_text(json.dumps(history, indent=2))
 
+    # The caller almost always wants the best-performing model, not whatever
+    # epoch the loop happened to stop on. Loss is not guaranteed to keep
+    # falling all the way to the last epoch - it can rise again late in
+    # training (overfitting, or an unlucky run of harder noise draws under
+    # noise_range sampling) - so the in-memory `model` can be worse than
+    # best.pt on disk. Swap it back in before returning.
+    best_path = out_dir / "best.pt"
+    if best_path.exists():
+        best_state = torch.load(best_path, map_location=device, weights_only=False)
+        model.load_state_dict(best_state["model"])
+        if best_state["epoch"] != epochs:
+            print(f"  returning epoch {best_state['epoch']}'s weights (best loss "
+                  f"{best_state['best']:.6f}), not epoch {epochs}'s")
+
     return model, history
 
 
