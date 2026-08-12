@@ -10,7 +10,9 @@ predicts a displacement per point.
 
 New to any of this? [**EXPLAINED.md**](EXPLAINED.md) walks through the whole
 project in plain language, no prior knowledge assumed, including every bug
-that got found along the way and why the fix worked.
+that got found along the way and why the fix worked. [**NOTES.md**](NOTES.md)
+covers every concept and term this project uses plus interview questions
+about it, if you're studying this project rather than just reading about it.
 
 ## Status
 
