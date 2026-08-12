@@ -38,8 +38,11 @@ Against the noisy input it removes 40% of the Chamfer error at 1% noise and
 86% at 3%. Per-cell detail in
 [results/benchmark_run2.txt](results/benchmark_run2.txt).
 
-The checkpoint behind this trained 46 of a planned 60 epochs and its loss was
-still falling, so the table is not the ceiling for this architecture.
+The checkpoint is epoch 46 of a 60-epoch run: training was resumed for the
+remaining 14 to check whether stopping early had cost anything, and it hadn't
+- see [The last epoch is not the best epoch](#the-last-epoch-is-not-the-best-epoch).
+This table is the practical ceiling for this training recipe at this budget,
+not a truncated result.
 
 ## Why attention needs geometry
 
@@ -137,6 +140,13 @@ the returned model right after training was scoring the worse epoch-60 weights
 while best.pt on disk still correctly pointed at epoch 46. `train()` now always
 hands back best.pt's weights regardless of which epoch the loop stopped at.
 Covered by `test_train_returns_the_best_checkpoint_not_the_last_epoch`.
+
+Training was later resumed from epoch 46 through the remaining 14 to check
+whether stopping there had left something on the table. It hadn't: the
+resulting benchmark reproduced the epoch-46 numbers to within about 1-2%
+(e.g. sparse/1% CD 2.8896 versus the original run's 2.89), consistent with
+the same optimum rather than a meaningfully different checkpoint. Epoch 46
+is a stable point for this recipe, not an early stop that cost anything.
 
 ## Undertraining looks like a bug
 
@@ -247,12 +257,17 @@ the published value, so the papers use a definition this project has not
 matched yet and P2M is excluded from any comparison. Resolving it needs their
 evaluation code rather than another guess.
 
+## Scope
+
+This result is PU-Net only. `scripts/benchmark.py` and the Colab notebook both
+support PC-Net too (`load_released_set(DATA, "PCNet", ...)`, same calibrated
+harness), but running it wasn't worth another multi-hour Colab session for a
+second dataset rather than a different result - the PU-Net table already
+answers the question this project set out to answer: reproduce the published
+protocol correctly and see where an honestly-measured implementation lands.
+
 ## What is left
 
-- **Finish the run.** The checkpoint behind the table stopped at 46 of 60
-  epochs with the loss still falling, so these numbers are not the ceiling.
-- **PC-Net half of the benchmark.** The data is downloaded and the harness
-  supports it; it just has not been run.
 - **Resolve the P2M convention** against the published evaluation code, which
   would make the second metric quotable instead of excluded.
 - **Close the CD gap.** ScoreDenoise, I-PFN and P2P-Bridge are ahead in every

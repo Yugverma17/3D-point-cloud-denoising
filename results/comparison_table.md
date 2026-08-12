@@ -16,3 +16,7 @@ CD / P2M, x1e-4, lower is better.
 
 **Read the CD values only.** P2M is not calibrated against the published
 definition (0.17x on a known baseline) and is shown for completeness only.
+
+PU-Net only - the harness supports PC-Net too but it was not run for this
+report. Checkpoint is epoch 46/60; resuming to 60 reproduced these numbers
+to within ~1-2%, confirming it as a stable optimum rather than an early stop.

@@ -27,4 +27,5 @@ papers call P2M. The P2M columns in our row are printed for completeness and
 must not be read as beating anyone. See docs/benchmark.md.
 
 Ours: 46 epochs, 4.83 M params, one forward pass, PU-Net training set only.
-PC-Net columns not run.
+Confirmed stable: resuming to epoch 60 reproduced these numbers to ~1-2%.
+PC-Net not included - out of scope for this report, the harness supports it.

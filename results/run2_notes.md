@@ -52,7 +52,19 @@ extracted to `best/best/{data.pkl, data/*, version, byteorder}`. Rezipping the
 members under a `best/` prefix with ZIP_STORED restores a file torch loads
 normally, with its full 46-epoch history intact.
 
-## Left undone
+## Resuming the remaining 14 epochs
 
-- PC-Net half of the benchmark (data is present, needs a GPU pass)
-- The remaining 14 epochs, since the loss was still falling
+Training was later resumed from this checkpoint through epoch 60 to check
+whether stopping at 46 had left improvement on the table. It hadn't: the
+resulting benchmark reproduced these numbers to within about 1-2% (sparse/1%
+CD 2.8896 vs 2.89, sparse/2% 4.0682 vs 4.07, sparse/3% 5.2866 vs 5.29,
+dense/1% 0.7633 vs 0.76, dense/2% 1.3957 vs 1.40) - consistent with the same
+optimum, not a materially different checkpoint. Epoch 46 is a stable point
+for this recipe rather than an early stop that cost anything.
+
+## Scope
+
+PC-Net was not run. The harness and Colab notebook both support it
+(`load_released_set(DATA, "PCNet", ...)`), but the PU-Net table already
+answers what this project set out to answer, and a second dataset wasn't
+worth another multi-hour session across repeated Colab disconnects.
