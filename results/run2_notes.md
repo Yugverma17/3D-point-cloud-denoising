@@ -60,7 +60,10 @@ resulting benchmark reproduced these numbers to within about 1-2% (sparse/1%
 CD 2.8896 vs 2.89, sparse/2% 4.0682 vs 4.07, sparse/3% 5.2866 vs 5.29,
 dense/1% 0.7633 vs 0.76, dense/2% 1.3957 vs 1.40) - consistent with the same
 optimum, not a materially different checkpoint. Epoch 46 is a stable point
-for this recipe rather than an early stop that cost anything.
+for this recipe rather than an early stop that cost anything. Full-precision
+numbers for those 5 cells are in
+[bench_partial_confirmation.json](bench_partial_confirmation.json), the raw
+resumable-benchmark cache pulled from Drive.
 
 ## Scope
 
