@@ -8,6 +8,10 @@ The architecture is multi-scale EdgeConv for local descriptors, then a
 transformer whose attention is biased by relative 3D offsets, then an MLP that
 predicts a displacement per point.
 
+New to any of this? [**EXPLAINED.md**](EXPLAINED.md) walks through the whole
+project in plain language, no prior knowledge assumed, including every bug
+that got found along the way and why the fix worked.
+
 ## Status
 
 Trained on the PU-Net training set and benchmarked against the published
